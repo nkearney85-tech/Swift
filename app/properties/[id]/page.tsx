@@ -20,11 +20,11 @@ import {
   getCameras, 
   getAuditLog, 
   getActiveShare,
-  getUser 
 } from '@/lib/store'
 import { Property, Camera, AuditLogEntry, Share } from '@/lib/types'
 import { ConsentSheet } from '@/components/consent-sheet'
 import { ActiveShareBanner } from '@/components/active-share-banner'
+import { createClient } from '@/lib/supabase/client'
 
 function formatTime(dateString: string): string {
   return new Date(dateString).toLocaleTimeString('en-US', {
@@ -60,29 +60,46 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const [showConsentSheet, setShowConsentSheet] = useState(false)
 
   async function loadData() {
-    const user = await getUser()
-    if (!user) {
+    const supabase = createClient()
+    
+    // Create a timeout promise
+    const timeout = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 3000) // 3 second timeout
+    })
+    
+    try {
+      // Race the auth check against the timeout
+      const result = await Promise.race([
+        supabase.auth.getUser(),
+        timeout,
+      ])
+      
+      // If timeout won or no user, redirect to login
+      if (!result || !('data' in result) || !result.data.user) {
+        router.push('/login')
+        return
+      }
+
+      const [prop, cams, log, share] = await Promise.all([
+        getProperty(id),
+        getCameras(id),
+        getAuditLog(id),
+        getActiveShare(id),
+      ])
+
+      if (!prop) {
+        router.push('/properties')
+        return
+      }
+
+      setProperty(prop)
+      setCameras(cams)
+      setAuditLog(log)
+      setActiveShare(share)
+      setLoading(false)
+    } catch {
       router.push('/login')
-      return
     }
-
-    const [prop, cams, log, share] = await Promise.all([
-      getProperty(id),
-      getCameras(id),
-      getAuditLog(id),
-      getActiveShare(id),
-    ])
-
-    if (!prop) {
-      router.push('/properties')
-      return
-    }
-
-    setProperty(prop)
-    setCameras(cams)
-    setAuditLog(log)
-    setActiveShare(share)
-    setLoading(false)
   }
 
   useEffect(() => {
