@@ -165,7 +165,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             Exterior Cameras
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {cameras.filter(c => c.is_exterior).map((camera) => (
+            {cameras.filter(c => !c.is_interior).map((camera) => (
               <Card key={camera.id} className="p-3 bg-card border-border">
                 <div className="aspect-video bg-secondary rounded-md flex items-center justify-center mb-2">
                   <Video className="w-8 h-8 text-muted-foreground/50" />
@@ -248,7 +248,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       {showConsentSheet && property && (
         <ConsentSheet
           property={property}
-          cameras={cameras.filter(c => c.is_exterior)}
+          cameras={cameras.filter(c => !c.is_interior)}
           onClose={() => setShowConsentSheet(false)}
           onAuthorized={handleShareCreated}
         />
