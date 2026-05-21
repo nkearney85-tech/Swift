@@ -6,9 +6,10 @@ import { Plus, MapPin, LogOut, Shield, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SwiftLogo } from '@/components/swift-logo'
-import { getProperties, signOut, getUser } from '@/lib/store'
+import { getProperties, signOut } from '@/lib/store'
 import { Property } from '@/lib/types'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 function ModePill({ mode }: { mode: 'watch' | 'guardian' }) {
   if (mode === 'guardian') {
@@ -35,15 +36,34 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     async function loadData() {
-      const user = await getUser()
-      if (!user) {
+      const supabase = createClient()
+      
+      // Create a timeout promise
+      const timeout = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 3000) // 3 second timeout
+      })
+      
+      try {
+        // Race the auth check against the timeout
+        const result = await Promise.race([
+          supabase.auth.getUser(),
+          timeout,
+        ])
+        
+        // If timeout won or no user, redirect to login
+        if (!result || !('data' in result) || !result.data.user) {
+          router.push('/login')
+          return
+        }
+        
+        setUserEmail(result.data.user.email ?? null)
+        const props = await getProperties()
+        setProperties(props)
+        setLoading(false)
+      } catch {
+        // On any error, redirect to login
         router.push('/login')
-        return
       }
-      setUserEmail(user.email)
-      const props = await getProperties()
-      setProperties(props)
-      setLoading(false)
     }
     loadData()
   }, [router])

@@ -89,10 +89,6 @@ export async function signOut(): Promise<void> {
   mockUser = null
 }
 
-export async function getUser(): Promise<User | null> {
-  return mockUser
-}
-
 // Property functions
 export async function getProperties(): Promise<Property[]> {
   await new Promise(resolve => setTimeout(resolve, 200))
